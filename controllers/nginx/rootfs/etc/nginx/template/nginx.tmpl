@@ -294,6 +294,15 @@ http {
     server {
         server_name {{ $server.Hostname }};
         listen 80{{ if $cfg.UseProxyProtocol }} proxy_protocol{{ end }}{{ if eq $server.Hostname "_"}} default_server reuseport backlog={{ $backlogSize }}{{end}};
+        location / {
+            keepalive_timeout 0;    # Disable HTTP keepalive
+            return 301 https://$host$request_uri;
+        }
+    }
+
+    server {
+        server_name {{ $server.Hostname }};
+        listen 81{{ if $cfg.UseProxyProtocol }} proxy_protocol{{ end }}{{ if eq $server.Hostname "_"}} default_server reuseport backlog={{ $backlogSize }}{{end}};
         {{ if $IsIPV6Enabled }}listen [::]:80{{ if $cfg.UseProxyProtocol }} proxy_protocol{{ end }}{{ if eq $server.Hostname "_"}} default_server reuseport backlog={{ $backlogSize }}{{ end }};{{ end }}
         set $proxy_upstream_name "-";
 
@@ -342,7 +351,7 @@ http {
             {{ if not (empty $location.ExternalAuth.Method) }}
             proxy_method                {{ $location.ExternalAuth.Method }};
             proxy_set_header            X-Original-URI $request_uri;
-            proxy_set_header            X-Scheme       $pass_access_scheme;
+            proxy_set_header            X-Scheme       https;
             {{ end }}
             proxy_pass_request_headers  on;
             proxy_set_header            Host {{ $location.ExternalAuth.Host }};
@@ -425,9 +434,9 @@ http {
             proxy_set_header X-Forwarded-For        $the_real_ip;
             proxy_set_header X-Forwarded-Host       $best_http_host;
             proxy_set_header X-Forwarded-Port       $pass_port;
-            proxy_set_header X-Forwarded-Proto      $pass_access_scheme;
+            proxy_set_header X-Forwarded-Proto      https;
             proxy_set_header X-Original-URI         $request_uri;
-            proxy_set_header X-Scheme               $pass_access_scheme;
+            proxy_set_header X-Scheme               https;
 
             # mitigate HTTPoxy Vulnerability
             # https://www.nginx.com/blog/mitigating-the-httpoxy-vulnerability-with-nginx/
